@@ -23,6 +23,8 @@
 
 extern PCONTEXT_HDL_TYPE       pContextHandler;
 extern CEdit                   m_CEditMessage;
+extern CEdit                   m_CEditLine;
+extern CEdit                   m_CEditSide;
 
 CString strBuffer;
 CString text;

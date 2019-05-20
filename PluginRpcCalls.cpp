@@ -48,9 +48,10 @@ void UpdateCEdit(LPCTSTR text)
 void RpcPIGetNotificationList( handle_t hdl, hyper i64Timestamp, short* sListLen, EPINotifyType eNotifyList[], PCONTEXT_HDL_TYPE* pphContext )
 {
     // no notifications
-    *sListLen = 2;
+    *sListLen = 3;
 	eNotifyList[0] = ePINotifyTypeMessage;
 	eNotifyList[1] = ePINotifyTypeBoard;
+	eNotifyList[2] = ePINotifyTypeState;
     // give Benchmark a context handle to use when calling the plugin.
     // normally this could be a pointer to a plugin side context data structure or object
     // for this simple example anything non-NULL will work.
@@ -134,7 +135,7 @@ void RpcPIAlarmTriggered( PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long 
 ///////////////////////////////////////////////////////////////////////////////
 void RpcPIPostMessage( PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, short sMessageLen, unsigned short usMessage[] )
 {
-	text.Format(_T("- RpcPIPostMessage : %s\r\n"), usMessage);
+	text.Format(_T("- RpcPIPostMessage : %s \r\n"), (wchar_t*)usMessage);
 	UpdateCEdit(text);
 }
 
@@ -147,8 +148,16 @@ void RpcPIChangePasteComplete(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {
 void RpcPIChangePasteStarted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {}
 void RpcPIDiagnosticsModeEnded(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {}
 void RpcPIDiagnosticsModeStarted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {}
-void RpcPIDispenseComplete(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {}
-void RpcPIDispenseStarted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, short sProfileNameLen, unsigned short usProfileName[]) {}
+void RpcPIDispenseComplete(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp)
+{
+	text.Format(_T("Dispense Completed : %d \r\n"), i64Timestamp);
+	UpdateCEdit(text);
+}
+void RpcPIDispenseStarted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, short sProfileNameLen, unsigned short usProfileName[])
+{
+	text.Format(_T("Dispense Started : %d %s \r\n"), i64Timestamp, (wchar_t*)usProfileName);
+	UpdateCEdit(text);
+}
 void RpcPIKneadNotification(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId) {}
 void RpcPIMachineStateChange(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, EPISysMachineState eNewState) {}
 void RpcPIManualAddPasteComplete(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {}
@@ -166,7 +175,13 @@ void RpcPIStencilRemoved(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {}
 void RpcPIWipeComplete(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {}
 void RpcPIWipeRequested(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, boolean bIsRequesting, short sRequesterNameLen, unsigned short usRequesterName[]) {}
 void RpcPIWipeStarted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, short sProfileNameLen, unsigned short usProfileName[]) {}
-void RpcPIWipeStartedWithData(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, short sProfileNameLen, unsigned short usProfileName[], double dHopOver, double dTravelOffset, EPIWipePaperFeedMode ePaperFeedMode, EPIWipeEventType eWipeEventType, short sWipeFrequency, short sNumSegments, double dSegmentIndexDistanceMm[], double dSegmentSpeedMmPerSec[], EPIWipeStrokeType eStrokeType[]) {}
+void RpcPIWipeStartedWithData(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, short sProfileNameLen, unsigned short usProfileName[], double dHopOver, double dTravelOffset, 
+	EPIWipePaperFeedMode ePaperFeedMode, EPIWipeEventType eWipeEventType, short sWipeFrequency, short sNumSegments, double dSegmentIndexDistanceMm[], double dSegmentSpeedMmPerSec[], 
+	EPIWipeStrokeType eStrokeType[])
+{
+	text.Format(_T("Wipe Started : %I64d, %s, %d, %d, %d, %s\r\n"), i64Timestamp, usProfileName, ePaperFeedMode, eWipeEventType, sWipeFrequency, eStrokeType);
+	UpdateCEdit(text);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Board Interface methods
@@ -176,7 +191,7 @@ void RpcPIBoardBarcodeNotification(PCONTEXT_HDL_TYPE phContext, hyper i64Timesta
 void RpcPIBoardClamped(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId) { OutputDebugStringW(L"RpcPIBoardClamped\n"); }
 void RpcPIBoardPrinted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardNumber, short sBarcodeLen, unsigned short usBarcode[], boolean bInitStrokeF2R, short sNumStrokes, EPIProcessedStatus eProcessedStatus, long lPackagedDataLength, byte packagedData[]) 
 { 
-	text.Format(L"{\"Board Printed\" : %d, \"Barcode\" : \"%s\", \"Status\": %d}\r\n", lBoardNumber, usBarcode, eProcessedStatus);
+	text.Format(L"{\"timestamp\" : %I64d, \"board_printed\" : %d, \"barcode\" : \"%s\", \"status\": %d}\r\n", i64Timestamp, lBoardNumber, usBarcode, eProcessedStatus);
 	UpdateCEdit(text); 
 }
 void RpcPIBoardProcgCompleted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId, long lBoardCount) {}
@@ -185,8 +200,16 @@ void RpcPIBoardRejected(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lB
 void RpcPIBoardUnclamped(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId) {}
 void RpcPIClearQueue(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {}
 void RpcPIPostPanelData(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId, short sNumPanels, short sPanelIdList[], unsigned short usBarcodeList[][BENCHMARK_PII_MAX_BARCODE_LEN]) {}
-void RpcPIPostPasteHeightData(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId, double dPasteHeightMinMm, double dPasteHeightMeasuredMm) {}
-void RpcPIPostPasteHeightDataEx(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId, double dPasteHeightMinMm, double dPasteHeightMaxMm, double dPasteHeightMeasuredMm) {}
+void RpcPIPostPasteHeightData(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId, double dPasteHeightMinMm, double dPasteHeightMeasuredMm)
+{
+	text.Format(_T("Paste Height Data : %d, %d, %f, %f \r\n"), i64Timestamp, lBoardId, dPasteHeightMinMm, dPasteHeightMeasuredMm);
+	UpdateCEdit(text);
+}
+void RpcPIPostPasteHeightDataEx(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId, double dPasteHeightMinMm, double dPasteHeightMaxMm, double dPasteHeightMeasuredMm)
+{
+	text.Format(_T("Paste Height Data : %d, %d, %f, %f, %f \r\n"), i64Timestamp, lBoardId, dPasteHeightMinMm, dPasteHeightMaxMm, dPasteHeightMeasuredMm);
+	UpdateCEdit(text);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //

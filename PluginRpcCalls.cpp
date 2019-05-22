@@ -25,6 +25,7 @@ extern PCONTEXT_HDL_TYPE       pContextHandler;
 extern CEdit                   m_CEditMessage;
 extern CEdit                   m_CEditLine;
 extern CEdit                   m_CEditSide;
+extern CEdit                   m_CEditLogPath;
 
 CString strBuffer;
 CString text;
@@ -45,6 +46,27 @@ CString getTimeStamp(time_t epoch)
 	CTime t(epoch);
 	CString res = t.Format("%Y-%m-%d %H-%M-%S");
 	return res;
+}
+
+void saveToFile(CString type, time_t epoch, CString header, CString text)
+{
+	CString line;
+	CString	side;
+	CString logpath;
+	CString strFileName;
+
+	CTime t(epoch);
+	CString res = t.Format("%Y-%m-%d_%H-%M-%S");
+
+	m_CEditLine.GetWindowTextW(line);
+	m_CEditSide.GetWindowTextW(side);
+	m_CEditLogPath.GetWindowTextW(logpath);
+
+	strFileName.Format(_T("%s%s_%s_%s_%s.csv"), (LPCWSTR)logpath, (LPCWSTR)line, (LPCWSTR)side, (LPCWSTR)type, (LPCWSTR)res);
+	CStdioFile f(strFileName, CFile::modeCreate | CFile::modeReadWrite);
+	f.WriteString(header);
+	f.WriteString(text);
+	f.Close();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -69,7 +91,7 @@ void RpcPIGetNotificationList( handle_t hdl, hyper i64Timestamp, short* sListLen
     // for this simple example anything non-NULL will work.
     // *pphContext = (PCONTEXT_HDL_TYPE)0x00000001;
 	*pphContext = (PCONTEXT_HDL_TYPE)pContextHandler;
-	UpdateCEdit(L"Received Notification List event.\r\n");
+	UpdateCEdit(L"Received Notification List request.\r\n");
 	UpdateCEdit(L"Subscribed to : [ePINotifyTypeMessage, ePINotifyTypeBoard, ePINotifyTypeState]\r\n");
 }
 
@@ -164,6 +186,10 @@ void RpcPIDispenseComplete(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp)
 
 	strDate = getTimeStamp(i64Timestamp);
 
+	CString data;
+	data.Format(_T("%s \r\n"), (LPCWSTR)strDate);
+	saveToFile(L"dispense", i64Timestamp, L"TimeStamp\n", data);
+
 	text.Format(_T("Dispense Completed : TimeStamp=%s \r\n"), (LPCWSTR)strDate);
 	UpdateCEdit(text);
 }
@@ -194,53 +220,129 @@ void RpcPIWipeComplete(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {}
 void RpcPIWipeRequested(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, boolean bIsRequesting, short sRequesterNameLen, unsigned short usRequesterName[]) {}
 void RpcPIWipeStarted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, short sProfileNameLen, unsigned short usProfileName[]) {}
 void RpcPIWipeStartedWithData(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, short sProfileNameLen, unsigned short usProfileName[], double dHopOver, double dTravelOffset, 
-	EPIWipePaperFeedMode ePaperFeedMode, EPIWipeEventType eWipeEventType, short sWipeFrequency, short sNumSegments, double dSegmentIndexDistanceMm[], double dSegmentSpeedMmPerSec[], 
+	EPIWipePaperFeedMode ePaperFeedMode, EPIWipeEventType eWipeEventType, short sWipeFrequency, short sNumSegments, double dSegmentIndexDistanceMm[], double dSegmentSpeedMmPerSec[],
 	EPIWipeStrokeType eStrokeType[])
 {
-	CString strTemp;
+	CString strPaperFeedMode;
+	CString strWipeEventType;
+	CString strStrokeType;
 	CString strDate;
 
-	strDate = getTimeStamp(i64Timestamp);
+	switch (ePaperFeedMode)
+	{
+	case EPIWipePaperFeedMode::ePIWipePaperFeedModeUndefined:
+		strPaperFeedMode = L"Undefined";
+		break;
+	case EPIWipePaperFeedMode::ePIWipePaperFeedModeIndex:
+		strPaperFeedMode = L"Index";
+		break;
+	case EPIWipePaperFeedMode::ePIWipePaperFeedModeContinuous:
+		strPaperFeedMode = L"Continuous";
+		break;
+	case EPIWipePaperFeedMode::ePIWipePaperFeedModeLast:
+		strPaperFeedMode = L"Last";
+		break;
+	default:
+		break;
+	}
 
-	strTemp.Append(L"[");
+	switch (eWipeEventType)
+	{
+	case EPIWipeEventType::PIWipeEventTypeAuerBoatComplete:
+		strWipeEventType = L"AuerBoatComplete";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeBoard:
+		strWipeEventType = L"Board";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeCleanAndRemoveTimer:
+		strWipeEventType = L"CleanAndRemoveTimer";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeDispense:
+		strWipeEventType = L"Dispense";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeIdle:
+		strWipeEventType = L"Idle";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeInspFail:
+		strWipeEventType = L"InspFail";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeKnead:
+		strWipeEventType = L"Knead";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeLast:
+		strWipeEventType = L"Last";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeManualCleanTimer:
+		strWipeEventType = L"ManualCleanTimer";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeStencilInspFail:
+		strWipeEventType = L"StencilInspFail";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeUndefined:
+		strWipeEventType = L"Undefined";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeUserDef:
+		strWipeEventType = L"UserDef";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeWipeNowManualClean:
+		strWipeEventType = L"WipeNowManualClean";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeWipeNowManualRemove:
+		strWipeEventType = L"WipeNowManualRemove";
+		break;
+	case EPIWipeEventType::PIWipeEventTypeWipeTest:
+		strWipeEventType = L"WipeTest";
+		break;
+	default:
+		break;
+	}
+
+
+	// strTemp.Append(L"[");
 	for (int i = 0; i < sNumSegments; i++)
 	{
 		switch (eStrokeType[i])
 		{
 		case ePIWipeStrokeTypeDryR2F:
-			strTemp.Append(L"DRY-R2F, ");
+			strStrokeType.Append(L"DRY-R2F ");
 			break;
 		case ePIWipeStrokeTypeDryF2R:
-			strTemp.Append(L"DRY-F2R, ");
+			strStrokeType.Append(L"DRY-F2R ");
 			break;
 		case ePIWipeStrokeTypeSolventR2F:
-			strTemp.Append(L"SOLVENT-R2F, ");
+			strStrokeType.Append(L"SOLVENT-R2F ");
 			break;
 		case ePIWipeStrokeTypeSolventF2R:
-			strTemp.Append(L"SOLVENT-F2R, ");
+			strStrokeType.Append(L"SOLVENT-F2R ");
 			break;
 		case ePIWipeStrokeTypeVacuumR2F:
-			strTemp.Append(L"VACUUM-R2F, ");
+			strStrokeType.Append(L"VACUUM-R2F ");
 			break;
 		case ePIWipeStrokeTypeVacuumF2R:
-			strTemp.Append(L"VACUUM-R2F, ");
+			strStrokeType.Append(L"VACUUM-R2F ");
 			break;
 		case ePIWipeStrokeTypeVacuumSolventF2R:
-			strTemp.Append(L"SOLVENT-F2R, ");
+			strStrokeType.Append(L"SOLVENT-F2R ");
 			break;
 		case ePIWipeStrokeTypeVacuumSolventR2F:
-			strTemp.Append(L"SOLVENT-R2F, ");
+			strStrokeType.Append(L"SOLVENT-R2F ");
 			break;
 		case ePIWipeStrokeTypeLast:
 		default:
-			strTemp.Append(L"UNKNOWN");
+			strStrokeType.Append(L"UNKNOWN");
 			break;
 		}
 	}
-	strTemp.Delete(strTemp.GetLength() - 2, 2);
-	strTemp.Append(L"]");
+	strStrokeType.Delete(strStrokeType.GetLength() - 1);
+	// strTemp.Append(L"]");
 
-	text.Format(_T("Wipe Started : TimeStamp=%s  Profilename=%s  PapedFeedMode=%d  WipeEventType=%d  WipeFrequency=%d  SrtokeType=%s\r\n"), (LPCWSTR)strDate, usProfileName, ePaperFeedMode, eWipeEventType, sWipeFrequency, (LPCWSTR)strTemp);
+	strDate = getTimeStamp(i64Timestamp);
+
+	CString data;
+	data.Format(_T("%s,%s,%s,%s,%d,%s\n"), (LPCWSTR)strDate, usProfileName, (LPCWSTR)strPaperFeedMode, (LPCWSTR)strWipeEventType, sWipeFrequency, (LPCWSTR)strStrokeType);
+	saveToFile(L"wipe", i64Timestamp, L"TimeStamp,ProfileName,PaperFeedMode,WipeEventType,WipeFequency,StrokeType\n", data);
+
+	text.Format(_T("Wipe Started : TimeStamp=%s  Profilename=%s  PapedFeedMode=%d  WipeEventType=%d  WipeFrequency=%d  StrokeType=%s\r\n"), (LPCWSTR)strDate, usProfileName, ePaperFeedMode, eWipeEventType, sWipeFrequency, (LPCWSTR)strStrokeType);
 	UpdateCEdit(text);
 }
 
@@ -259,19 +361,23 @@ void RpcPIBoardPrinted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBo
 
 	switch (eProcessedStatus)
 	{
-	case ePIProcessedStatusAOK:
+	case EPIProcessedStatus::ePIProcessedStatusAOK:
 		sResult = L"OK";
 		break;
-	case ePIProcessedStatusError:
+	case EPIProcessedStatus::ePIProcessedStatusError:
 		sResult = L"ERROR";
 		break;
-	case ePIProcessedStatusLast:
+	case EPIProcessedStatus::ePIProcessedStatusLast:
 		sResult = L"LAST";
 		break;
 	default:
 		sResult = L"UNKNOWN";
 		break;
 	}
+
+	CString data;
+	data.Format(_T("%s,%d,%s,%d,%s"), (LPCWSTR)strDate, lBoardNumber, usBarcode, sNumStrokes, sResult);
+	saveToFile(L"board", i64Timestamp, L"TimeStamp,BoardNumber,BarCode,NumStrokes,Status\n", data);
 
 	text.Format(L"Board Printed : TimeStamp=%s  BoardNumber=%d  BarCode=%s  NumStrokes=%d  Status=%s \r\n", (LPCWSTR)strDate, lBoardNumber, usBarcode, sNumStrokes, sResult);
 	UpdateCEdit(text); 
@@ -296,6 +402,10 @@ void RpcPIPostPasteHeightDataEx(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp,
 	CString strDate;
 
 	strDate = getTimeStamp(i64Timestamp);
+
+	CString data;
+	data.Format(_T("%s,%d,%f,%f,%f\n"), (LPCWSTR)strDate, lBoardId, dPasteHeightMinMm, dPasteHeightMaxMm, dPasteHeightMeasuredMm);
+	saveToFile(L"pasteheight", i64Timestamp, L"TimeStamp,BoardNumber,PasteHeightMinMm,PasteHeightMaxMm,PasteHeightMeasuredMm\n", data);
 
 	text.Format(_T("Paste Height Data :  TimeStamp=%s BoardId=%d  PasteHeightMinMm=%f  PasteHeightMaxMm=%f  PasteHeightMeasuredMm=%f \r\n"), (LPCWSTR)strDate, lBoardId, dPasteHeightMinMm, dPasteHeightMaxMm, dPasteHeightMeasuredMm);
 	UpdateCEdit(text);

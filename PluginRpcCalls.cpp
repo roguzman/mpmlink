@@ -29,7 +29,7 @@ extern CEdit                   m_CEditSide;
 CString strBuffer;
 CString text;
 
-void UpdateCEdit(LPCTSTR text)
+void UpdateCEdit(CString text)
 {
 	int nLength = m_CEditMessage.GetWindowTextLength();
 	// put the selection at the end of text
@@ -38,6 +38,13 @@ void UpdateCEdit(LPCTSTR text)
 	m_CEditMessage.ReplaceSel(text);
 	// strBuffer.Append(text);
 	// m_CEditMessage.SetWindowTextW(strBuffer);
+}
+
+CString getTimeStamp(time_t epoch)
+{
+	CTime t(epoch);
+	CString res = t.Format("%Y-%m-%d %H-%M-%S");
+	return res;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -62,6 +69,7 @@ void RpcPIGetNotificationList( handle_t hdl, hyper i64Timestamp, short* sListLen
     // for this simple example anything non-NULL will work.
     // *pphContext = (PCONTEXT_HDL_TYPE)0x00000001;
 	*pphContext = (PCONTEXT_HDL_TYPE)pContextHandler;
+	UpdateCEdit(L"Received Notification List event.\r\n");
 	UpdateCEdit(L"Subscribed to : [ePINotifyTypeMessage, ePINotifyTypeBoard, ePINotifyTypeState]\r\n");
 }
 
@@ -133,7 +141,11 @@ void RpcPIAlarmTriggered( PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long 
 ///////////////////////////////////////////////////////////////////////////////
 void RpcPIPostMessage( PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, short sMessageLen, unsigned short usMessage[] )
 {
-	text.Format(_T("Message sent by Benchmark : Timestamp=%I64d Message=%s \r\n"), i64Timestamp, usMessage);
+	CString strDate;
+
+	strDate = getTimeStamp(i64Timestamp);
+
+	text.Format(_T("Message sent by Benchmark : Timestamp=%s Message=%s \r\n"), (LPCWSTR)strDate, usMessage);
 	UpdateCEdit(text);
 }
 
@@ -148,12 +160,20 @@ void RpcPIDiagnosticsModeEnded(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) 
 void RpcPIDiagnosticsModeStarted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {}
 void RpcPIDispenseComplete(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp)
 {
-	text.Format(_T("Dispense Completed : TimeStamp=%I64d \r\n"), i64Timestamp);
+	CString strDate;
+
+	strDate = getTimeStamp(i64Timestamp);
+
+	text.Format(_T("Dispense Completed : TimeStamp=%s \r\n"), (LPCWSTR)strDate);
 	UpdateCEdit(text);
 }
 void RpcPIDispenseStarted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, short sProfileNameLen, unsigned short usProfileName[])
 {
-	text.Format(_T("Dispense Started : TimeStamp=%I64d  ProfileName=%s \r\n"), i64Timestamp, usProfileName);
+	CString strDate;
+
+	strDate = getTimeStamp(i64Timestamp);
+
+	text.Format(_T("Dispense Started : TimeStamp=%s  ProfileName=%s \r\n"), (LPCWSTR)strDate, usProfileName);
 	UpdateCEdit(text);
 }
 void RpcPIKneadNotification(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId) {}
@@ -178,6 +198,9 @@ void RpcPIWipeStartedWithData(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, s
 	EPIWipeStrokeType eStrokeType[])
 {
 	CString strTemp;
+	CString strDate;
+
+	strDate = getTimeStamp(i64Timestamp);
 
 	strTemp.Append(L"[");
 	for (int i = 0; i < sNumSegments; i++)
@@ -217,8 +240,7 @@ void RpcPIWipeStartedWithData(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, s
 	strTemp.Delete(strTemp.GetLength() - 2, 2);
 	strTemp.Append(L"]");
 
-
-	text.Format(_T("Wipe Started : TimeStamp=%I64d  Profilename=%s  PapedFeedMode=%d  WipeEventType=%d  WipeFrequency=%d  SrtokeType=%s\r\n"), i64Timestamp, usProfileName, ePaperFeedMode, eWipeEventType, sWipeFrequency, (LPCWSTR)strTemp);
+	text.Format(_T("Wipe Started : TimeStamp=%s  Profilename=%s  PapedFeedMode=%d  WipeEventType=%d  WipeFrequency=%d  SrtokeType=%s\r\n"), (LPCWSTR)strDate, usProfileName, ePaperFeedMode, eWipeEventType, sWipeFrequency, (LPCWSTR)strTemp);
 	UpdateCEdit(text);
 }
 
@@ -230,7 +252,10 @@ void RpcPIBoardBarcodeNotification(PCONTEXT_HDL_TYPE phContext, hyper i64Timesta
 void RpcPIBoardClamped(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId) { OutputDebugStringW(L"RpcPIBoardClamped\n"); }
 void RpcPIBoardPrinted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardNumber, short sBarcodeLen, unsigned short usBarcode[], boolean bInitStrokeF2R, short sNumStrokes, EPIProcessedStatus eProcessedStatus, long lPackagedDataLength, byte packagedData[]) 
 { 
-	LPCWSTR sResult = new TCHAR[80];
+	wchar_t* sResult = new TCHAR[80];
+	CString strDate;
+
+	strDate = getTimeStamp(i64Timestamp);
 
 	switch (eProcessedStatus)
 	{
@@ -247,7 +272,8 @@ void RpcPIBoardPrinted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBo
 		sResult = L"UNKNOWN";
 		break;
 	}
-	text.Format(L"Board Printed : TimeStamp=%I64d  BoardNumber=%d  BarCode=%s  NumStrokes=%d  Status=%s \r\n", i64Timestamp, lBoardNumber, usBarcode, sNumStrokes, sResult);
+
+	text.Format(L"Board Printed : TimeStamp=%s  BoardNumber=%d  BarCode=%s  NumStrokes=%d  Status=%s \r\n", (LPCWSTR)strDate, lBoardNumber, usBarcode, sNumStrokes, sResult);
 	UpdateCEdit(text); 
 }
 void RpcPIBoardProcgCompleted(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId, long lBoardCount) {}
@@ -258,12 +284,20 @@ void RpcPIClearQueue(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp) {}
 void RpcPIPostPanelData(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId, short sNumPanels, short sPanelIdList[], unsigned short usBarcodeList[][BENCHMARK_PII_MAX_BARCODE_LEN]) {}
 void RpcPIPostPasteHeightData(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId, double dPasteHeightMinMm, double dPasteHeightMeasuredMm)
 {
-	text.Format(_T("Paste Height Data :  TimeStamp=%I64d  BoardId=%d  PasteHeightMinMm=%f  PasteHeightMeasuredMm=%f \r\n"), i64Timestamp, lBoardId, dPasteHeightMinMm, dPasteHeightMeasuredMm);
+	CString strDate;
+
+	strDate = getTimeStamp(i64Timestamp);
+
+	text.Format(_T("Paste Height Data :  TimeStamp=%s  BoardId=%d  PasteHeightMinMm=%f  PasteHeightMeasuredMm=%f \r\n"), (LPCWSTR)strDate, lBoardId, dPasteHeightMinMm, dPasteHeightMeasuredMm);
 	UpdateCEdit(text);
 }
 void RpcPIPostPasteHeightDataEx(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp, long lBoardId, double dPasteHeightMinMm, double dPasteHeightMaxMm, double dPasteHeightMeasuredMm)
 {
-	text.Format(_T("Paste Height Data :  TimeStamp=%I64d BoardId=%d  PasteHeightMinMm=%f  PasteHeightMaxMm=%f  PasteHeightMeasuredMm=%f \r\n"), i64Timestamp, lBoardId, dPasteHeightMinMm, dPasteHeightMaxMm, dPasteHeightMeasuredMm);
+	CString strDate;
+
+	strDate = getTimeStamp(i64Timestamp);
+
+	text.Format(_T("Paste Height Data :  TimeStamp=%s BoardId=%d  PasteHeightMinMm=%f  PasteHeightMaxMm=%f  PasteHeightMeasuredMm=%f \r\n"), (LPCWSTR)strDate, lBoardId, dPasteHeightMinMm, dPasteHeightMaxMm, dPasteHeightMeasuredMm);
 	UpdateCEdit(text);
 }
 
@@ -277,5 +311,3 @@ void RpcPIPostPasteHeightDataEx(PCONTEXT_HDL_TYPE phContext, hyper i64Timestamp,
 extern "C" void RPC_ENTRY PCONTEXT_HDL_TYPE_rundown(PCONTEXT_HDL_TYPE /*phContext*/)
 {
 } 
-
-
